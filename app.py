@@ -9,10 +9,11 @@ st.markdown("Ask any question about company policies, and get your fine-tuned Hi
 
 hf_token = st.secrets.get("HF_TOKEN")
 
-# We target the base Llama 3.1 model but command it to apply your custom trained weights!
+# We apply your custom adapters via headers directly during initialization
 client = InferenceClient(
     model="meta-llama/Llama-3.1-8B-Instruct", 
-    token=hf_token
+    token=hf_token,
+    headers={"X-Lora-Model": "tarunshekhar/Customer_Support_Hinglish_Bot"}
 )
 
 def process_customer_support(user_query):
@@ -32,16 +33,14 @@ def process_customer_support(user_query):
             }
         ]
         
-        # we pull your adapters dynamically right here!
         response = client.chat_completion(
             messages=messages, 
-            max_tokens=256,
-            extra_headers={"X-Lora-Model": "tarunshekhar/Customer_Support_Hinglish_Bot"}
+            max_tokens=256
         )
         
         output_text = response.choices[0].message.content
         
-        # Strip out prompt/thinking structure tags to keep it clean
+        # Clean up tags completely
         final_answer = re.sub(r"<think>.*?</think>", "", output_text, flags=re.DOTALL)
         final_answer = final_answer.replace("<think>", "").replace("</think>", "").strip()
         return final_answer

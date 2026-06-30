@@ -9,9 +9,8 @@ st.markdown("Ask any question about company policies, and get a natural Hinglish
 
 hf_token = st.secrets.get("HF_TOKEN")
 
-# Using the robust, fully-supported base model on the free tier
 client = InferenceClient(
-    model="meta-llama/Llama-3.1-8B-Instruct", 
+    model="Qwen/Qwen2.5-7B-Instruct", 
     token=hf_token
 )
 
@@ -19,20 +18,19 @@ def process_customer_support(user_query):
     if not user_query.strip():
         return "Please enter a valid query."
     try:
+        # Dynamic context fallback framework
         retrieved_context = (
-            "If you forget your password, click 'Forgot Password' on the login landing page, "
-            "enter your registered email address, and open the password reset link sent to your inbox. "
-            "The link expires in 15 minutes."
+            "Users can cancel premium memberships by navigating to 'My Account', "
+            "opening the subscription status panel, and clicking 'Cancel Membership'. "
+            "Alternatively, they can email or call customer support to initiate cancellation manually."
         )
         messages = [
             {
                 "role": "system",
                 "content": (
-                    "You are a helpful customer support assistant. You write your internal logic in English inside <think> tags. "
-                    "Immediately after the closing </think> tag, write your response in fluent, natural conversational Hinglish with flawless Hindi sentence grammar.\n"
-                    "Do not use formal or pure Hindi words. Use casual, helpful Hinglish that an Indian customer care executive would use.\n\n"
-                    "Example:\n"
-                    "Aap chinta mat kijiye. Aap sabse pehle login page par jaakar 'Forgot Password' par click karein. Phir apne registered email address par aaye hue password reset link ko open karein. Yeh link 15 mins tak valid rahega."
+                    "You are a helpful customer support assistant. Write your internal logical analysis thoughts inside <think>...</think> tags. "
+                    "Provide your final customer-facing answer completely in natural, friendly conversational Hinglish with correct Hindi sentence flow.\n"
+                    "Make sure you close the </think> tag cleanly before finishing your output text."
                 )
             },
             {
@@ -43,13 +41,16 @@ def process_customer_support(user_query):
         response = client.chat_completion(messages=messages, max_tokens=512)
         output_text = response.choices[0].message.content
         
-        # Cleanly isolate the response text if thinking tags exist
-        final_answer = re.sub(r"<think>.*?</think>", "", output_text, flags=re.DOTALL).strip()
+        # Robust global pattern removal to aggressively wipe out any internal thought tag regions
+        final_answer = re.sub(r"<think>.*?</think>", "", output_text, flags=re.DOTALL)
+        
+        # Cleanup any leftover stray structural tag indicators if the model cut off mid-thought
+        final_answer = final_answer.replace("<think>", "").replace("</think>", "").strip()
         return final_answer
     except Exception as e:
         return f"System Error: {str(e)}"
 
-user_input = st.text_input(label="Ask your question here:", placeholder="Type here... (e.g., password bhul gya help)")
+user_input = st.text_input(label="Ask your question here:", placeholder="Type here... (e.g., membership cancel kaise kare?)")
 
 if st.button("Submit Query", type="primary") or user_input:
     if not user_input.strip():

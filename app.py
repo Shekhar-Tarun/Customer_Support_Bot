@@ -9,9 +9,9 @@ st.markdown("Ask any question about company policies, and get a natural Hinglish
 
 hf_token = st.secrets.get("HF_TOKEN")
 
-# 🎉 TARGETING YOUR FINETUNED HINGLISH MODEL REPOSITORY HERE
+# Using the robust, fully-supported base model on the free tier
 client = InferenceClient(
-    model="tarunshekhar/Customer_Support_Hinglish_Bot", 
+    model="meta-llama/Llama-3.1-8B-Instruct", 
     token=hf_token
 )
 
@@ -29,9 +29,10 @@ def process_customer_support(user_query):
                 "role": "system",
                 "content": (
                     "You are a helpful customer support assistant. You write your internal logic in English inside <think> tags. "
-                    "Immediately after the closing </think> tag, write your response in fluent, natural conversational Hinglish with flawless Hindi sentence grammar.\n\n"
+                    "Immediately after the closing </think> tag, write your response in fluent, natural conversational Hinglish with flawless Hindi sentence grammar.\n"
+                    "Do not use formal or pure Hindi words. Use casual, helpful Hinglish that an Indian customer care executive would use.\n\n"
                     "Example:\n"
-                    "Aap chinta mat kijiye. Aap sabse pehle login page par jaakar 'Forgot Password' par click karein. Phir apne registered email address par aaye hue password reset link ko open karein."
+                    "Aap chinta mat kijiye. Aap sabse pehle login page par jaakar 'Forgot Password' par click karein. Phir apne registered email address par aaye hue password reset link ko open karein. Yeh link 15 mins tak valid rahega."
                 )
             },
             {
@@ -41,6 +42,8 @@ def process_customer_support(user_query):
         ]
         response = client.chat_completion(messages=messages, max_tokens=512)
         output_text = response.choices[0].message.content
+        
+        # Cleanly isolate the response text if thinking tags exist
         final_answer = re.sub(r"<think>.*?</think>", "", output_text, flags=re.DOTALL).strip()
         return final_answer
     except Exception as e:
